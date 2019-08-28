@@ -70,11 +70,20 @@ void DrawTriangle(color* framebuffer, int w, glm::vec4 v1, glm::vec4 v2, glm::ve
   float miny = bbox[1];
   float maxx = bbox[2];
   float maxy = bbox[3];
+  glm::vec3 lightDir(0, 0, 1);
+  glm::vec3 normal = glm::normalize(glm::cross(glm::vec3(v1-v2), glm::vec3(v1-v3)));
+  float magnitude = glm::dot(lightDir, normal);
   for (int y = miny; y <= maxy; y++) {
     for (int x = minx; x <= maxx; x++) {
       if (PointInTriangle(glm::vec3(x, y, 1), glm::vec3(v1), 
                           glm::vec3(v2), glm::vec3(v3))) {
-        framebuffer[x + y * w] = ColorRGB(std::rand() % 0x100, std::rand() % 0x100, std::rand() % 0x100);
+        if (magnitude >= 0.f) {
+          framebuffer[x + y * w] = ColorRGB(
+            (uchar) (magnitude * 0xff),
+            (uchar) (magnitude * 0xff),
+            (uchar) (magnitude * 0xff)
+          );
+        }
       }
     }
   }
@@ -89,13 +98,14 @@ glm::vec4 assimpToGlm(const aiVector3D& aivert) {
 }
 void Draw(color* framebuffer, const aiScene* scene, int h, int w) {
   const aiMesh* mesh = scene->mMeshes[0];
+  float depth = 255;
   glm::mat4 rotateZ(-1, 0, 0, 0,
                     0, -1 ,0, 0,
                     0, 0, 1, 0,
                     0,0,0,1);
   glm::mat4 scale(w/2.0f,0,0,0,
                   0,h/2.0f,0,0,
-                  0,0,1,0,
+                  0,0,depth,0,
                   0,0,0,1);
   glm::mat4 translate(1,0,0,0,
                       0,1,0,0,
