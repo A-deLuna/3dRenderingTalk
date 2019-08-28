@@ -27,8 +27,15 @@ color ColorRGB(uchar red, uchar green, uchar blue) {
   return c;
 }
 
+struct screenData {
+  color* framebuffer;
+  float* depthbuffer;
+  int width;
+  int height;
+};
+
 void Initialize(SDL_Window** window, SDL_Renderer** renderer,
-                SDL_Texture** texture, int w, int h);
+                SDL_Texture** texture, screenData* screenData);
 
 glm::vec4 BoundingBox(glm::vec4 v1, glm::vec4 v2, 
                       glm::vec4 v3) {
@@ -64,7 +71,7 @@ bool PointInTriangle(glm::vec3 p, glm::vec3 v1, glm::vec3 v2,
   return true;
 }
 
-void DrawTriangle(color* framebuffer, int w, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3) { 
+void DrawTriangle(screenData* screenData, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3) { 
   glm::vec4 bbox = BoundingBox(v1, v2, v3);
   float minx = bbox[0];
   float miny = bbox[1];
@@ -78,7 +85,7 @@ void DrawTriangle(color* framebuffer, int w, glm::vec4 v1, glm::vec4 v2, glm::ve
       if (PointInTriangle(glm::vec3(x, y, 1), glm::vec3(v1), 
                           glm::vec3(v2), glm::vec3(v3))) {
         if (magnitude >= 0.f) {
-          framebuffer[x + y * w] = ColorRGB(
+          screenData->framebuffer[x + y * screenData->width] = ColorRGB(
             (uchar) (magnitude * 0xff),
             (uchar) (magnitude * 0xff),
             (uchar) (magnitude * 0xff)
@@ -89,16 +96,19 @@ void DrawTriangle(color* framebuffer, int w, glm::vec4 v1, glm::vec4 v2, glm::ve
   }
 }
 
-void Destroy(color* framebuffer, SDL_Window* window,
+void Destroy(screenData* screenData, SDL_Window* window,
              SDL_Renderer* renderer, SDL_Texture* texture);
 
 
 glm::vec4 assimpToGlm(const aiVector3D& aivert) {
   return glm::vec4(aivert.x, aivert.y, aivert.z, 1.f);
 }
-void Draw(color* framebuffer, const aiScene* scene, int h, int w) {
+
+void Draw(screenData* screenData, const aiScene* scene) {
   const aiMesh* mesh = scene->mMeshes[0];
   float depth = 255;
+  float w = screenData->width;
+  float h = screenData->height;
   glm::mat4 rotateZ(-1, 0, 0, 0,
                     0, -1 ,0, 0,
                     0, 0, 1, 0,
@@ -123,14 +133,13 @@ void Draw(color* framebuffer, const aiScene* scene, int h, int w) {
       assimpToGlm(mesh->mVertices[face.mIndices[1]]);
     glm::vec4 v3 = viewport *
       assimpToGlm(mesh->mVertices[face.mIndices[2]]);
-    DrawTriangle(framebuffer, w, v1, v2, v3);
+    DrawTriangle(screenData, v1, v2, v3);
   }
 
 }
 
-void EventLoop(color* framebuffer, const aiScene* scene, 
-               SDL_Renderer* renderer, SDL_Texture* texture,
-               int screenWidth, int screenHeight) {
+void EventLoop(screenData* screenData, const aiScene* scene, 
+               SDL_Renderer* renderer, SDL_Texture* texture) {
   bool running = true;
   while (running) {
     SDL_Event event;
@@ -144,18 +153,19 @@ void EventLoop(color* framebuffer, const aiScene* scene,
     void* texturePixels;
     int pitch;
     SDL_LockTexture(texture, 0, &texturePixels, &pitch);
-    memset(framebuffer, 0xff,
-      screenHeight * screenWidth * sizeof(unsigned int));
+    memset(screenData->framebuffer, 0xff,
+      screenData->height * screenData->width * sizeof(unsigned int));
 
-    Draw(framebuffer, scene, screenHeight, screenWidth);
+    Draw(screenData, scene);
 
-    memcpy(texturePixels, framebuffer,
-      screenHeight * screenWidth * sizeof(unsigned int));
+    memcpy(texturePixels, screenData->framebuffer,
+      screenData->height * screenData->width * sizeof(unsigned int));
     SDL_UnlockTexture(texture);
     SDL_RenderCopy(renderer, texture, 0, 0);
     SDL_RenderPresent(renderer);
   }
 }
+
 
 int main() {
   const aiScene* scene = aiImportFile("african_head/african_head.obj",
@@ -165,31 +175,32 @@ int main() {
     exit(0);
   }
 
-  int screenWidth = 640;
-  int screenHeight = 480;
+  screenData screenData;
+  screenData.width = 640;
+  screenData.height = 480;
+
   SDL_Window* window;
   SDL_Renderer* renderer;
   SDL_Texture* texture;
-  Initialize(&window, &renderer, &texture, screenWidth, screenHeight);
+  Initialize(&window, &renderer, &texture, &screenData);
 
-  color* framebuffer = (color*)calloc(
-    screenHeight * screenWidth,  sizeof(color));
+  screenData.framebuffer = (color*)calloc(
+    screenData.height * screenData.width,  sizeof(color));
 
-  EventLoop(framebuffer, scene, renderer, texture, screenWidth,
-            screenHeight);
+  EventLoop(&screenData, scene, renderer, texture);
  
-  Destroy(framebuffer, window, renderer, texture);
+  Destroy(&screenData, window, renderer, texture);
   aiReleaseImport(scene);
 }
 
 void Initialize(SDL_Window** window, SDL_Renderer** renderer,
-                SDL_Texture** texture, int w, int h) {
+                SDL_Texture** texture, screenData* screenData) {
   SDL_Init(SDL_INIT_EVERYTHING);
   *window = SDL_CreateWindow(
     "title",
     SDL_WINDOWPOS_UNDEFINED,
     SDL_WINDOWPOS_UNDEFINED,
-    w, h, 0);
+    screenData->width, screenData->height, 0);
 
   *renderer = SDL_CreateRenderer(*window, -1, 0);
 
@@ -197,12 +208,12 @@ void Initialize(SDL_Window** window, SDL_Renderer** renderer,
     *renderer,
     SDL_PIXELFORMAT_RGBA8888,
     SDL_TEXTUREACCESS_STREAMING,
-    w,h);
+    screenData->width,screenData->height);
 }
 
-void Destroy(color* framebuffer, SDL_Window* window,
+void Destroy(screenData* screenData, SDL_Window* window,
              SDL_Renderer* renderer, SDL_Texture* texture) {
-  free(framebuffer);
+  free(screenData->framebuffer);
   SDL_DestroyTexture(texture);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
