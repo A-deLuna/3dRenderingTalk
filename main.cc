@@ -29,9 +29,10 @@ color ColorRGB(uchar red, uchar green, uchar blue) {
 
 struct screenData {
   color* framebuffer;
-  float* depthbuffer;
+  uchar* depthbuffer;
   int width;
   int height;
+  int depth;
 };
 
 void Initialize(SDL_Window** window, SDL_Renderer** renderer,
@@ -62,13 +63,8 @@ glm::vec3 Baricenter(glm::vec3 p, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3) {
   return glm::vec3(u, v, 1-u-v);
 }
 
-bool PointInTriangle(glm::vec3 p, glm::vec3 v1, glm::vec3 v2, 
-                     glm::vec3 v3) {
-  glm::vec3 bari =  Baricenter(p, v1, v2, v3);
-  if (bari.x < 0 || bari.y < 0 || (bari.x + bari.y) > 1.f) {
-    return false;
-  }
-  return true;
+bool PointInTriangle(glm::vec3 baricenter) {
+  return baricenter.x >= 0 && baricenter.y >= 0 && baricenter.x + baricenter.y <= 1.f;
 }
 
 void DrawTriangle(screenData* screenData, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3) { 
@@ -79,12 +75,19 @@ void DrawTriangle(screenData* screenData, glm::vec4 v1, glm::vec4 v2, glm::vec4 
   float maxy = bbox[3];
   glm::vec3 lightDir(0, 0, 1);
   glm::vec3 normal = glm::normalize(glm::cross(glm::vec3(v1-v2), glm::vec3(v1-v3)));
+
   float magnitude = glm::dot(lightDir, normal);
+  if (magnitude < 0.f) return;
+
   for (int y = miny; y <= maxy; y++) {
     for (int x = minx; x <= maxx; x++) {
-      if (PointInTriangle(glm::vec3(x, y, 1), glm::vec3(v1), 
-                          glm::vec3(v2), glm::vec3(v3))) {
-        if (magnitude >= 0.f) {
+      glm::vec3 baricenter = Baricenter(glm::vec3(x, y, 1), glm::vec3(v1), 
+                          glm::vec3(v2), glm::vec3(v3));
+      if (PointInTriangle(baricenter)) {
+        glm::vec3 point = glm::vec3(v1 * baricenter.x + v2 * baricenter.y + v3 * baricenter.z);
+        uchar* pixelDepth = screenData->depthbuffer + (x + y * screenData->width);
+        if (point.z > *pixelDepth) {
+          *pixelDepth = point.z;
           screenData->framebuffer[x + y * screenData->width] = ColorRGB(
             (uchar) (magnitude * 0xff),
             (uchar) (magnitude * 0xff),
@@ -115,12 +118,12 @@ void Draw(screenData* screenData, const aiScene* scene) {
                     0,0,0,1);
   glm::mat4 scale(w/2.0f,0,0,0,
                   0,h/2.0f,0,0,
-                  0,0,depth,0,
+                  0,0,depth/2.0f,0,
                   0,0,0,1);
   glm::mat4 translate(1,0,0,0,
                       0,1,0,0,
                       0,0,1,0,
-                      w/2.0f, h/2.0f, 0 , 1);
+                      w/2.0f, h/2.0f, depth/2.0f, 1);
   //glm::mat4 scale = glm::scale(glm::mat4(1),glm::vec3(w/3.f, h/3.f, 1));
   //glm::mat4 translate  = glm::translate(glm::mat4(1), glm::vec3(10 + w/3.f, 10 + h/3.f, 0));
   glm::mat4 viewport = translate * scale * rotateZ;
@@ -156,6 +159,9 @@ void EventLoop(screenData* screenData, const aiScene* scene,
     memset(screenData->framebuffer, 0xff,
       screenData->height * screenData->width * sizeof(unsigned int));
 
+    memset(screenData->depthbuffer, 0x00,
+      screenData->height * screenData->width * sizeof(uchar));
+
     Draw(screenData, scene);
 
     memcpy(texturePixels, screenData->framebuffer,
@@ -186,6 +192,9 @@ int main() {
 
   screenData.framebuffer = (color*)calloc(
     screenData.height * screenData.width,  sizeof(color));
+
+  screenData.depthbuffer = (uchar*)calloc(
+    screenData.height * screenData.width,  sizeof(float));
 
   EventLoop(&screenData, scene, renderer, texture);
  
