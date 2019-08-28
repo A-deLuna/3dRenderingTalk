@@ -1,4 +1,5 @@
 #include "SDL.h"
+#include <cstdlib>
 #include "assimp/cimport.h"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
@@ -10,50 +11,114 @@
 
 using uint = unsigned int;
 using uchar = unsigned char;
-struct Color {
-  Color(uchar red, uchar green, uchar blue, uchar alpha) {
-    this->red = red;
-    this->green = green;
-    this->blue = blue;
-    this->alpha = alpha;
-  }
 
+struct color {
   unsigned char alpha;
   unsigned char blue;
   unsigned char green;
   unsigned char red;
 };
+color ColorRGB(uchar red, uchar green, uchar blue) {
+  color c;
+  c.red = red;
+  c.green = green;
+  c.blue = blue;
+  c.alpha = 0x00;
+  return c;
+}
 
 void Initialize(SDL_Window** window, SDL_Renderer** renderer,
                 SDL_Texture** texture, int w, int h);
 
-void Destroy(Color* framebuffer, SDL_Window* window,
+glm::vec4 BoundingBox(glm::vec4 v1, glm::vec4 v2, 
+                      glm::vec4 v3) {
+  float minx = std::min(v1.x, std::min(v2.x, v3.x));
+  float miny = std::min(v1.y, std::min(v2.y, v3.y));
+  float maxx = std::max(v1.x, std::max(v2.x, v3.x));
+  float maxy = std::max(v1.y, std::max(v2.y, v3.y));
+
+  return glm::vec4(minx, miny, maxx, maxy);
+}
+
+glm::vec3 Baricenter(glm::vec3 p, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3) { 
+  glm::vec3 v21 = v2-v1;
+  glm::vec3 v31 = v3-v1;
+  glm::vec3 vp1 =  v1 - p;
+
+  glm::vec3 x = glm::vec3(v21.x, v31.x, vp1.x);
+  glm::vec3 y = glm::vec3(v21.y, v31.y, vp1.y);
+  glm::vec3 cross  = glm::cross(x,y);
+
+  float u = cross.x / cross.z;
+  float v = cross.y / cross.z;
+
+  return glm::vec3(u, v, 1-u-v);
+}
+
+bool PointInTriangle(glm::vec3 p, glm::vec3 v1, glm::vec3 v2, 
+                     glm::vec3 v3) {
+  glm::vec3 bari =  Baricenter(p, v1, v2, v3);
+  if (bari.x < 0 || bari.y < 0 || (bari.x + bari.y) > 1.f) {
+    return false;
+  }
+  return true;
+}
+
+void DrawTriangle(color* framebuffer, int w, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3) { 
+  glm::vec4 bbox = BoundingBox(v1, v2, v3);
+  float minx = bbox[0];
+  float miny = bbox[1];
+  float maxx = bbox[2];
+  float maxy = bbox[3];
+  for (int y = miny; y <= maxy; y++) {
+    for (int x = minx; x <= maxx; x++) {
+      if (PointInTriangle(glm::vec3(x, y, 1), glm::vec3(v1), 
+                          glm::vec3(v2), glm::vec3(v3))) {
+        framebuffer[x + y * w] = ColorRGB(std::rand() % 0x100, std::rand() % 0x100, std::rand() % 0x100);
+      }
+    }
+  }
+}
+
+void Destroy(color* framebuffer, SDL_Window* window,
              SDL_Renderer* renderer, SDL_Texture* texture);
 
 
-void Draw(Color* framebuffer, const aiScene* scene, int h, int w) {
+glm::vec4 assimpToGlm(const aiVector3D& aivert) {
+  return glm::vec4(aivert.x, aivert.y, aivert.z, 1.f);
+}
+void Draw(color* framebuffer, const aiScene* scene, int h, int w) {
   const aiMesh* mesh = scene->mMeshes[0];
-  glm::mat4 scale(w*3.f/4.0f,0,0,0,
-                  0,h*3.f/4.0f,0,0,
+  glm::mat4 rotateZ(-1, 0, 0, 0,
+                    0, -1 ,0, 0,
+                    0, 0, 1, 0,
+                    0,0,0,1);
+  glm::mat4 scale(w/2.0f,0,0,0,
+                  0,h/2.0f,0,0,
                   0,0,1,0,
                   0,0,0,1);
   glm::mat4 translate(1,0,0,0,
                       0,1,0,0,
                       0,0,1,0,
-                      w/8.f + w*3.f/4.0f,h/8.f+h*3.f/4.0f,0,1);
-  for (int i = 0; i < mesh->mNumVertices; i++) {
-    const aiVector3D aivert = mesh->mVertices[i];
-    glm::vec4 vertice(aivert.x, aivert.y, aivert.z, 1);
-    glm::vec4 screenVert = translate * scale * vertice;
-    
-    int pixel = (int)(screenVert.x + screenVert.y * w);
-    if (pixel>= 0 && pixel < w * h) {
-      framebuffer[pixel] = Color(0,0,0,255);
-    }
+                      w/2.0f, h/2.0f, 0 , 1);
+  //glm::mat4 scale = glm::scale(glm::mat4(1),glm::vec3(w/3.f, h/3.f, 1));
+  //glm::mat4 translate  = glm::translate(glm::mat4(1), glm::vec3(10 + w/3.f, 10 + h/3.f, 0));
+  glm::mat4 viewport = translate * scale * rotateZ;
+
+  for (int i = 0; i < mesh->mNumFaces; i++) {
+    aiFace face = mesh->mFaces[i];
+    glm::vec4 v1 = viewport *
+      assimpToGlm(mesh->mVertices[face.mIndices[0]]);
+    glm::vec4 v2 = viewport *
+      assimpToGlm(mesh->mVertices[face.mIndices[1]]);
+    glm::vec4 v3 = viewport *
+      assimpToGlm(mesh->mVertices[face.mIndices[2]]);
+    DrawTriangle(framebuffer, w, v1, v2, v3);
   }
+
 }
 
-void EventLoop(Color* framebuffer, const aiScene* scene, 
+void EventLoop(color* framebuffer, const aiScene* scene, 
                SDL_Renderer* renderer, SDL_Texture* texture,
                int screenWidth, int screenHeight) {
   bool running = true;
@@ -97,8 +162,8 @@ int main() {
   SDL_Texture* texture;
   Initialize(&window, &renderer, &texture, screenWidth, screenHeight);
 
-  Color* framebuffer = (Color*)calloc(
-    screenHeight * screenWidth,  sizeof(Color));
+  color* framebuffer = (color*)calloc(
+    screenHeight * screenWidth,  sizeof(color));
 
   EventLoop(framebuffer, scene, renderer, texture, screenWidth,
             screenHeight);
@@ -125,7 +190,7 @@ void Initialize(SDL_Window** window, SDL_Renderer** renderer,
     w,h);
 }
 
-void Destroy(Color* framebuffer, SDL_Window* window,
+void Destroy(color* framebuffer, SDL_Window* window,
              SDL_Renderer* renderer, SDL_Texture* texture) {
   free(framebuffer);
   SDL_DestroyTexture(texture);
