@@ -154,7 +154,7 @@ void EventLoop(screenData* screenData, const aiScene* scene,
     void* texturePixels;
     int pitch;
     SDL_LockTexture(texture, 0, &texturePixels, &pitch);
-    memset(screenData->framebuffer, 0xff,
+    memset(screenData->framebuffer, 0x00,
       screenData->height * screenData->width * sizeof(unsigned int));
 
     memset(screenData->depthbuffer, 0x00,
