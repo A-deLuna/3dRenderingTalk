@@ -124,8 +124,6 @@ void Draw(screenData* screenData, const aiScene* scene) {
                       0,1,0,0,
                       0,0,1,0,
                       w/2.0f, h/2.0f, depth/2.0f, 1);
-  //glm::mat4 scale = glm::scale(glm::mat4(1),glm::vec3(w/3.f, h/3.f, 1));
-  //glm::mat4 translate  = glm::translate(glm::mat4(1), glm::vec3(10 + w/3.f, 10 + h/3.f, 0));
   glm::mat4 viewport = translate * scale * rotateZ;
 
   for (int i = 0; i < mesh->mNumFaces; i++) {
@@ -181,7 +179,7 @@ int main() {
     exit(0);
   }
 
-  screenData screenData;
+  screenData screenData = {};
   screenData.width = 640;
   screenData.height = 480;
 
@@ -190,11 +188,11 @@ int main() {
   SDL_Texture* texture;
   Initialize(&window, &renderer, &texture, &screenData);
 
-  screenData.framebuffer = (color*)calloc(
-    screenData.height * screenData.width,  sizeof(color));
+  screenData.framebuffer = (color*)malloc(
+    screenData.height * screenData.width  * sizeof(color));
 
-  screenData.depthbuffer = (uchar*)calloc(
-    screenData.height * screenData.width,  sizeof(float));
+  screenData.depthbuffer = (uchar*)malloc(
+    screenData.height * screenData.width *  sizeof(float));
 
   EventLoop(&screenData, scene, renderer, texture);
  
