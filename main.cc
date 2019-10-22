@@ -70,25 +70,21 @@ bool PointInTriangle(vec3 baricenter) {
          baricenter.x + baricenter.y <= 1.f;
 }
 
-void DrawTriangle(screen* screen, vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
+void DrawTriangle(screen* screen, vec3 v1, vec3 v2, vec3 v3) {
   vec4 bbox = BoundingBox(v1, v2, v3);
   float minx = bbox[0];
   float miny = bbox[1];
   float maxx = bbox[2];
   float maxy = bbox[3];
-  vec3 lightDir(0, 0, 1);
 
-  float magnitude = -glm::dot(lightDir, normal);
-  if (magnitude < 0.f)
-    return;
-
+  uint8_t r = rand() % 255;
+  uint8_t g = rand() % 255;
+  uint8_t b = rand() % 255;
   for (int32_t y = miny; y <= maxy; y++) {
     for (int32_t x = minx; x <= maxx; x++) {
       vec3 baricenter = Baricenter(vec3(x, y, 1), v1, v2, v3);
       if (PointInTriangle(baricenter)) {
-        screen->framebuffer[x + y * screen->width] =
-            ColorRGB((uint8_t)(magnitude * 0xff), (uint8_t)(magnitude * 0xff),
-                     (uint8_t)(magnitude * 0xff));
+        screen->framebuffer[x + y * screen->width] = ColorRGB(r, g, b);
       }
     }
   }
@@ -124,10 +120,7 @@ void Draw(screen* screen, resources* resources) {
         vec3((v3_model.x + 1.f) * screen->width / 2.f,
              (v3_model.y + 1.f) * screen->height / 2.f, v3_model.z);
 
-    vec3 normal =
-        glm::normalize(glm::cross(v3_model - v1_model, v2_model - v1_model));
-
-    DrawTriangle(screen, v1_screen, v2_screen, v3_screen, normal);
+    DrawTriangle(screen, v1_screen, v2_screen, v3_screen);
   }
 }
 
