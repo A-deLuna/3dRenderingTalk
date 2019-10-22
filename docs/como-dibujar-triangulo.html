@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Intro a 3D rendering</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+      <h2> ¿Cómo dibujamos un triángulo? </h2>
+      <div class="hcenter">
+        <ul>
+          <li> Encontramos el BoundingBox del triángulo </li>
+          <li> Recorremos pixel por pixel del bounding box</li>
+          <li> Checamos si ese pixel está en el triángulo </li>
+          <ul>
+            <li style="font-size:1em"> pintamos ese pixel </li>
+          </ul>
+        </ul>
+      </div>
+      <div class="hcenter">
+        <img src="trianglerast.png"/>
+      </div>
+      <div class="bottom-right">
+        <a id="left" href="producto-cruz.html">
+          <button>
+            <div class="arrow-left"/>
+          </button>
+        </a>
+        <a id="right" href="codigo-dibujar-traingulo.html">
+          <button>
+            <div class="arrow-right"/>
+          </button>
+        </a>
+      </div>
+      <script defer src="leftright.js"></script>
+  </body>
+</html>

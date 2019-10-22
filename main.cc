@@ -8,6 +8,8 @@
 #include <cassert>
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 using uint = unsigned int;
 using uchar = unsigned char;
@@ -35,6 +37,18 @@ struct screenData {
   int depth;
 };
 
+struct image {
+  uchar const* buffer;
+  int x; 
+  int y;
+  int channels;
+};
+
+struct resources {
+  aiScene const * scene; 
+  image* image; 
+};
+
 void Initialize(SDL_Window** window, SDL_Renderer** renderer,
                 SDL_Texture** texture, screenData* screenData);
 
@@ -60,14 +74,15 @@ glm::vec3 Baricenter(glm::vec3 p, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3) {
   float u = cross.x / cross.z;
   float v = cross.y / cross.z;
 
-  return glm::vec3(u, v, 1-u-v);
+  return glm::vec3(1-u-v,u, v);
 }
 
 bool PointInTriangle(glm::vec3 baricenter) {
   return baricenter.x >= 0 && baricenter.y >= 0 && baricenter.x + baricenter.y <= 1.f;
 }
 
-void DrawTriangle(screenData* screenData, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3) { 
+void DrawTriangle(screenData* screenData, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3, 
+                  glm::vec2 t1, glm::vec2 t2, glm::vec2 t3, image* image) { 
   glm::vec4 bbox = BoundingBox(v1, v2, v3);
   float minx = bbox[0];
   float miny = bbox[1];
@@ -88,6 +103,11 @@ void DrawTriangle(screenData* screenData, glm::vec4 v1, glm::vec4 v2, glm::vec4 
         uchar* pixelDepth = screenData->depthbuffer + (x + y * screenData->width);
         if (point.z > *pixelDepth) {
           *pixelDepth = point.z;
+          glm::vec2 textureCoords = t1 * baricenter.x + t2 * baricenter.y + t3 * baricenter.z;
+          glm::ivec2 screenTextCoords(textureCoords.x * image->x, (1.f-textureCoords.y) * image->y);
+
+          uchar const* pixelData = &image->buffer[image->channels * (screenTextCoords.x + image->x * screenTextCoords.y)];
+          color color = ColorRGB(pixelData[0], pixelData[1], pixelData[2]);
           screenData->framebuffer[x + y * screenData->width] = ColorRGB(
             (uchar) (magnitude * 0xff),
             (uchar) (magnitude * 0xff),
@@ -107,8 +127,10 @@ glm::vec4 assimpToGlm(const aiVector3D& aivert) {
   return glm::vec4(aivert.x, aivert.y, aivert.z, 1.f);
 }
 
-void Draw(screenData* screenData, const aiScene* scene) {
-  const aiMesh* mesh = scene->mMeshes[0];
+void Draw(screenData* screenData, resources* resources) {
+  static float rotation = 0.f;
+  rotation += .1f;
+  const aiMesh* mesh = resources->scene->mMeshes[0];
   float depth = 255;
   float w = screenData->width;
   float h = screenData->height;
@@ -124,7 +146,8 @@ void Draw(screenData* screenData, const aiScene* scene) {
                       0,1,0,0,
                       0,0,1,0,
                       w/2.0f, h/2.0f, depth/2.0f, 1);
-  glm::mat4 viewport = translate * scale * rotateZ;
+  glm::mat4 rotateY = glm::rotate(glm::mat4(1), glm::radians(rotation), glm::vec3(0,1,0));
+  glm::mat4 viewport = translate * scale * rotateY * rotateZ;
 
   for (int i = 0; i < mesh->mNumFaces; i++) {
     aiFace face = mesh->mFaces[i];
@@ -134,12 +157,20 @@ void Draw(screenData* screenData, const aiScene* scene) {
       assimpToGlm(mesh->mVertices[face.mIndices[1]]);
     glm::vec4 v3 = viewport *
       assimpToGlm(mesh->mVertices[face.mIndices[2]]);
-    DrawTriangle(screenData, v1, v2, v3);
+
+    glm::vec2 t1 = glm::vec2(mesh->mTextureCoords[0][face.mIndices[0]].x,
+                             mesh->mTextureCoords[0][face.mIndices[0]].y);
+    glm::vec2 t2 = glm::vec2(mesh->mTextureCoords[0][face.mIndices[1]].x,
+                             mesh->mTextureCoords[0][face.mIndices[1]].y);
+    glm::vec2 t3 = glm::vec2(mesh->mTextureCoords[0][face.mIndices[2]].x,
+                             mesh->mTextureCoords[0][face.mIndices[2]].y);
+
+    DrawTriangle(screenData, v1, v2, v3, t1,t2,t3, resources->image);
   }
 
 }
 
-void EventLoop(screenData* screenData, const aiScene* scene, 
+void EventLoop(screenData* screenData, resources* resources, 
                SDL_Renderer* renderer, SDL_Texture* texture) {
   bool running = true;
   while (running) {
@@ -160,7 +191,7 @@ void EventLoop(screenData* screenData, const aiScene* scene,
     memset(screenData->depthbuffer, 0x00,
       screenData->height * screenData->width * sizeof(uchar));
 
-    Draw(screenData, scene);
+    Draw(screenData, resources);
 
     memcpy(texturePixels, screenData->framebuffer,
       screenData->height * screenData->width * sizeof(unsigned int));
@@ -172,16 +203,29 @@ void EventLoop(screenData* screenData, const aiScene* scene,
 
 
 int main() {
-  const aiScene* scene = aiImportFile("african_head/african_head.obj",
-                                      aiProcessPreset_TargetRealtime_Fast);
-  if(!scene) {
+  resources resources = {};
+  resources.scene = aiImportFile("african_head/african_head.obj",
+                                  aiProcessPreset_TargetRealtime_Fast);
+  if(!resources.scene) {
     std::cout << aiGetErrorString();
+    exit(0);
+  }
+  image image = {};
+  image.channels = 3;
+  resources.image = &image;
+
+  int imageChannels;
+  image.buffer = stbi_load("african_head/african_head_diffuse.tga",
+                               &image.x, &image.y, &imageChannels, 
+                               /*desired_channels=*/image.channels);
+  if(!image.buffer) {
+    std::cout << stbi_failure_reason();
     exit(0);
   }
 
   screenData screenData = {};
-  screenData.width = 640;
-  screenData.height = 480;
+  screenData.width = 1024;
+  screenData.height = 768;
 
   SDL_Window* window;
   SDL_Renderer* renderer;
@@ -194,10 +238,11 @@ int main() {
   screenData.depthbuffer = (uchar*)malloc(
     screenData.height * screenData.width *  sizeof(float));
 
-  EventLoop(&screenData, scene, renderer, texture);
+  EventLoop(&screenData, &resources, renderer, texture);
  
   Destroy(&screenData, window, renderer, texture);
-  aiReleaseImport(scene);
+  aiReleaseImport(resources.scene);
+  stbi_image_free((void*)image.buffer);
 }
 
 void Initialize(SDL_Window** window, SDL_Renderer** renderer,

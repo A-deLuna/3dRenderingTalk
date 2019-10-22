@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Intro a 3D rendering</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+      <h2> Pixeles </h2>
+      <table class="pixel-memory">
+        <tbody>
+          <tr>
+          <!--red -->
+            <td class="pixel-memory" style="background:#f00;">0xFF</td>
+            <td class="pixel-memory" style="background:#f00;">0x00</td>
+            <td class="pixel-memory" style="background:#f00;">0x00</td>
+            <td class="pixel-memory" style="background:#f00;">0xFF</td>
+          <!--green -->
+            <td class="pixel-memory"style="background:#0f0;">0x00</td>
+            <td class="pixel-memory"style="background:#0f0;">0xFF</td>
+            <td class="pixel-memory"style="background:#0f0;">0x00</td>
+            <td class="pixel-memory"style="background:#0f0;">0xFF</td>
+          <!--blue -->
+            <td class="pixel-memory"style="background:#00f;">0x00</td>
+            <td class="pixel-memory"style="background:#00f;">0x00</td>
+            <td class="pixel-memory"style="background:#00f;">0xFF</td>
+            <td class="pixel-memory"style="background:#00f;">0xFF</td>
+          <!--yellow -->
+            <td class="pixel-memory"style="background:#ff0;">0xFF</td>
+            <td class="pixel-memory"style="background:#ff0;">0xFF</td>
+            <td class="pixel-memory"style="background:#ff0;">0x00</td>
+            <td class="pixel-memory"style="background:#ff0;">0xFF</td>
+          <!--teal -->
+            <td class="pixel-memory"style="background:#0ff;">0x00</td>
+            <td class="pixel-memory"style="background:#0ff;">0xFF</td>
+            <td class="pixel-memory"style="background:#0ff;">0xFF</td>
+            <td class="pixel-memory"style="background:#0ff;">0xFF</td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="pixels">
+        <tbody>
+        <tr>
+          <td class="pixels" style="background:#f00;"> </td>
+          <td class="pixels" style="background:#0f0;"> </td>
+          <td class="pixels" style="background:#00f;"> </td>
+        </tr>
+        <tr>
+          <td class="pixels" style="background:#ff0;"> </td>
+          <td class="pixels" style="background:#0ff;"> </td>
+          <td class="pixels" style="background:#f0f;"> </td>
+        </tr>
+        <tr>
+          <td class="pixels" style="background:#fff;"> </td>
+          <td class="pixels" style="background:#000;"> </td>
+          <td class="pixels" style="background:#888;"> </td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="bottom-right">
+        <a id="left" href="meta.html">
+          <button>
+            <div class="arrow-left"/>
+          </button>
+        </a>
+        <a id="right" href="modelo.html">
+          <button>
+            <div class="arrow-right"/>
+          </button>
+        </a>
+      </div>
+      <script defer src="leftright.js"></script>
+  </body>
+</html>

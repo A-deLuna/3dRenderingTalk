@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Intro a 3D rendering</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="jsxgraph.css">
+  </head>
+  <body>
+    <h2> Producto punto </h2>
+    <div class="hcenter">
+      <div id="jxgbox" class="jxgbox" style="width:75vh; height:75vh;"> </div>
+    </div>
+    <div class="bottom-right">
+      <a id="left" href="resta-puntos.html">
+        <button>
+          <div class="arrow-left"/>
+        </button>
+      </a>
+      <a id="right" href="producto-cruz.html">
+        <button>
+          <div class="arrow-right"/>
+        </button>
+      </a>
+    </div>
+    <script defer src="leftright.js"></script>
+    <script src="jsxgraphcore.js"></script>
+    <script src="jsxgraphoptions.js"></script>
+    <script>
+      var board = JXG.JSXGraph.initBoard('jxgbox', 
+        { axis:true, keepaspectration: true});
+      var p1 = board.create('point',[0,1], {name:'A'});
+      var p2 = board.create('point',[1,0], {name:'B'});
+      var v1 = board.create('arrow', [[0,0],'A'], {strokewidth: 5 });
+      var v2 = board.create('arrow', [[0,0],'B'], 
+        {strokewidth: 5, strokeColor: "#f00"});
+      var ticks1 = board.create('ticks', [v1,1]);
+      var ticks2 = board.create('ticks', [v2,1]);
+      var text = board.create('text', [.5,2, dotProductText],
+        {fontsize:30});
+      function dotProductText() {
+       var v1Vec = [v1.point2.X() - v1.point1.X(),
+                    v1.point2.Y() - v1.point1.Y()];
+       var v2Vec = [v2.point2.X() - v2.point1.X(),
+                    v2.point2.Y() - v2.point1.Y()];
+        var dot = v1Vec[0] * v2Vec[0] + v1Vec[1] * v2Vec[1];
+        return "Dot product: " + dot;
+      }
+    </script>
+  </body>
+</html>
