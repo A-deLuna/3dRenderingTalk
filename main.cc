@@ -28,10 +28,8 @@ color ColorRGB(uint8_t red, uint8_t green, uint8_t blue) {
 
 struct screen {
   color* framebuffer;
-  uint8_t* depthbuffer;
   int32_t width;
   int32_t height;
-  uint8_t depth;
 };
 
 struct resources {
@@ -88,15 +86,9 @@ void DrawTriangle(screen* screen, vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
     for (int32_t x = minx; x <= maxx; x++) {
       vec3 baricenter = Baricenter(vec3(x, y, 1), v1, v2, v3);
       if (PointInTriangle(baricenter)) {
-        float pointz =
-            v1.z * baricenter.x + v2.z * baricenter.y + v3.z * baricenter.z;
-        uint8_t* pixelDepth = screen->depthbuffer + (x + y * screen->width);
-        if (pointz > *pixelDepth) {
-          *pixelDepth = pointz;
-          screen->framebuffer[x + y * screen->width] =
-              ColorRGB((uint8_t)(magnitude * 0xff), (uint8_t)(magnitude * 0xff),
-                       (uint8_t)(magnitude * 0xff));
-        }
+        screen->framebuffer[x + y * screen->width] =
+            ColorRGB((uint8_t)(magnitude * 0xff), (uint8_t)(magnitude * 0xff),
+                     (uint8_t)(magnitude * 0xff));
       }
     }
   }
@@ -118,19 +110,19 @@ void Draw(screen* screen, resources* resources) {
     aiFace face = mesh->mFaces[i];
 
     vec3 v1_model = convertGlm(mesh->mVertices[face.mIndices[0]]);
-    vec3 v1_screen = vec3((v1_model.x + 1.f) * screen->width / 2.f,
-                          (v1_model.y + 1.f) * screen->height / 2.f,
-                          (v1_model.z + 1.f) * screen->depth / 2.f);
+    vec3 v1_screen =
+        vec3((v1_model.x + 1.f) * screen->width / 2.f,
+             (v1_model.y + 1.f) * screen->height / 2.f, v1_model.z);
 
     vec3 v2_model = convertGlm(mesh->mVertices[face.mIndices[1]]);
-    vec3 v2_screen = vec3((v2_model.x + 1.f) * screen->width / 2.f,
-                          (v2_model.y + 1.f) * screen->height / 2.f,
-                          (v2_model.z + 1.f) * screen->depth / 2.f);
+    vec3 v2_screen =
+        vec3((v2_model.x + 1.f) * screen->width / 2.f,
+             (v2_model.y + 1.f) * screen->height / 2.f, v2_model.z);
 
     vec3 v3_model = convertGlm(mesh->mVertices[face.mIndices[2]]);
-    vec3 v3_screen = vec3((v3_model.x + 1.f) * screen->width / 2.f,
-                          (v3_model.y + 1.f) * screen->height / 2.f,
-                          (v3_model.z + 1.f) * screen->depth / 2.f);
+    vec3 v3_screen =
+        vec3((v3_model.x + 1.f) * screen->width / 2.f,
+             (v3_model.y + 1.f) * screen->height / 2.f, v3_model.z);
 
     vec3 normal =
         glm::normalize(glm::cross(v3_model - v1_model, v2_model - v1_model));
@@ -159,9 +151,6 @@ void EventLoop(screen* screen,
     memset(screen->framebuffer, 0x00,
            screen->height * screen->width * sizeof(uint32_t));
 
-    memset(screen->depthbuffer, 0x00,
-           screen->height * screen->width * sizeof(uint8_t));
-
     Draw(screen, resources);
 
     memcpy(texturePixels, screen->framebuffer,
@@ -185,7 +174,6 @@ int main() {
   screen screen = {};
   screen.width = 1024;
   screen.height = 768;
-  screen.depth = 255;
 
   SDL_Window* window;
   SDL_Renderer* renderer;
@@ -194,9 +182,6 @@ int main() {
 
   screen.framebuffer =
       (color*)malloc(screen.height * screen.width * sizeof(color));
-
-  screen.depthbuffer =
-      (uint8_t*)malloc(screen.height * screen.width * sizeof(uint8_t));
 
   EventLoop(&screen, &resources, renderer, texture);
 
