@@ -5,6 +5,8 @@
 #include "assimp/cimport.h"
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 using glm::vec2;
 using glm::vec3;
@@ -34,8 +36,16 @@ struct screen {
   uint8_t depth;
 };
 
+struct image {
+  uint8_t const* buffer;
+  int32_t x;
+  int32_t y;
+  int32_t channels;
+};
+
 struct resources {
   aiScene const* scene;
+  image* image;
 };
 
 void Initialize(SDL_Window** window,
@@ -72,7 +82,15 @@ bool PointInTriangle(vec3 baricenter) {
          baricenter.x + baricenter.y <= 1.f;
 }
 
-void DrawTriangle(screen* screen, vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
+void DrawTriangle(screen* screen,
+                  vec3 v1,
+                  vec3 v2,
+                  vec3 v3,
+                  vec3 normal,
+                  vec2 t1,
+                  vec2 t2,
+                  vec2 t3,
+                  image* image) {
   vec4 bbox = BoundingBox(v1, v2, v3);
   float minx = bbox[0];
   float miny = bbox[1];
@@ -93,9 +111,19 @@ void DrawTriangle(screen* screen, vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
         uint8_t* pixelDepth = screen->depthbuffer + (x + y * screen->width);
         if (pointz > *pixelDepth) {
           *pixelDepth = pointz;
+          vec2 textureCoords =
+              t1 * baricenter.x + t2 * baricenter.y + t3 * baricenter.z;
+          glm::ivec2 screenTextCoords(textureCoords.x * image->x,
+                                      (1.f - textureCoords.y) * image->y);
+
+          uint8_t const* pixelData =
+              &image->buffer[image->channels * (screenTextCoords.x +
+                                                image->x * screenTextCoords.y)];
+          color color = ColorRGB(pixelData[0], pixelData[1], pixelData[2]);
           screen->framebuffer[x + y * screen->width] =
-              ColorRGB((uint8_t)(magnitude * 0xff), (uint8_t)(magnitude * 0xff),
-                       (uint8_t)(magnitude * 0xff));
+              ColorRGB((uint8_t)(magnitude * color.red),
+                       (uint8_t)(magnitude * color.green),
+                       (uint8_t)(magnitude * color.blue));
         }
       }
     }
@@ -135,7 +163,15 @@ void Draw(screen* screen, resources* resources) {
     vec3 normal =
         glm::normalize(glm::cross(v3_model - v1_model, v2_model - v1_model));
 
-    DrawTriangle(screen, v1_screen, v2_screen, v3_screen, normal);
+    vec2 t1 = vec2(mesh->mTextureCoords[0][face.mIndices[0]].x,
+                   mesh->mTextureCoords[0][face.mIndices[0]].y);
+    vec2 t2 = vec2(mesh->mTextureCoords[0][face.mIndices[1]].x,
+                   mesh->mTextureCoords[0][face.mIndices[1]].y);
+    vec2 t3 = vec2(mesh->mTextureCoords[0][face.mIndices[2]].x,
+                   mesh->mTextureCoords[0][face.mIndices[2]].y);
+
+    DrawTriangle(screen, v1_screen, v2_screen, v3_screen, normal, t1, t2, t3,
+                 resources->image);
   }
 }
 
@@ -182,6 +218,19 @@ int main() {
     exit(0);
   }
 
+  // Load texture
+  image image = {};
+  image.channels = 3;
+  resources.image = &image;
+  int imageChannels;
+  image.buffer = stbi_load("african_head/african_head_diffuse.tga", &image.x,
+                           &image.y, &imageChannels,
+                           /*desired_channels=*/image.channels);
+  if (!image.buffer) {
+    std::cout << stbi_failure_reason();
+    exit(0);
+  }
+
   screen screen = {};
   screen.width = 1024;
   screen.height = 768;
@@ -202,6 +251,7 @@ int main() {
 
   Destroy(&screen, window, renderer, texture);
   aiReleaseImport(resources.scene);
+  stbi_image_free((void*)image.buffer);
 }
 
 void Initialize(SDL_Window** window,
