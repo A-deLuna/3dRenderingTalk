@@ -32,10 +32,63 @@ struct screen {
   int32_t height;
 };
 
+struct resources {
+  aiScene const* scene;
+};
+
 void Initialize(SDL_Window** window,
                 SDL_Renderer** renderer,
                 SDL_Texture** texture,
                 screen* screen);
+
+vec4 BoundingBox(vec3 v1, vec3 v2, vec3 v3) {
+  float minx = std::min(v1.x, std::min(v2.x, v3.x));
+  float miny = std::min(v1.y, std::min(v2.y, v3.y));
+  float maxx = std::max(v1.x, std::max(v2.x, v3.x));
+  float maxy = std::max(v1.y, std::max(v2.y, v3.y));
+
+  return vec4(minx, miny, maxx, maxy);
+}
+
+vec3 Baricenter(vec3 p, vec3 v1, vec3 v2, vec3 v3) {
+  vec3 v31 = v1 - v3;
+  vec3 v32 = v2 - v3;
+  vec3 pv3 = v3 - p;
+
+  vec3 x = vec3(v31.x, v32.x, pv3.x);
+  vec3 y = vec3(v31.y, v32.y, pv3.y);
+  vec3 cross = glm::cross(x, y);
+
+  float u = cross.x / cross.z;
+  float v = cross.y / cross.z;
+
+  return vec3(u, v, 1.f - u - v);
+}
+
+bool PointInTriangle(vec3 baricenter) {
+  return baricenter.x >= 0 && baricenter.y >= 0 &&
+         baricenter.x + baricenter.y <= 1.f;
+}
+
+void DrawTriangle(screen* screen, vec3 v1, vec3 v2, vec3 v3) {
+  vec4 bbox = BoundingBox(v1, v2, v3);
+  float minx = bbox[0];
+  float miny = bbox[1];
+  float maxx = bbox[2];
+  float maxy = bbox[3];
+
+  uint8_t r = rand() % 255;
+  uint8_t g = rand() % 255;
+  uint8_t b = rand() % 255;
+  for (int32_t y = miny; y <= maxy; y++) {
+    for (int32_t x = minx; x <= maxx; x++) {
+      vec3 baricenter = Baricenter(vec3(x, y, 1), v1, v2, v3);
+      if (PointInTriangle(baricenter)) {
+        screen->framebuffer[x + y * screen->width] = ColorRGB(r, g, b);
+      }
+    }
+  }
+}
 
 void Destroy(screen* screen,
              SDL_Window* window,
@@ -46,15 +99,35 @@ vec3 convertGlm(aiVector3D vec) {
   return vec3(vec.x, vec.y, vec.z);
 }
 
-void Draw(screen* screen) {
-  for (int32_t i = 0; i < screen->height; i++) {
-    screen->framebuffer[i + screen->width * i] = ColorRGB(0xff, 0xff, 0xff);
-    screen->framebuffer[(screen->width - i - 1) + screen->width * i] =
-        ColorRGB(0xff, 0xff, 0xff);
+void Draw(screen* screen, resources* resources) {
+  aiMesh const* mesh = resources->scene->mMeshes[0];
+
+  for (size_t i = 0; i < mesh->mNumFaces; i++) {
+    aiFace face = mesh->mFaces[i];
+
+    vec3 v1_model = convertGlm(mesh->mVertices[face.mIndices[0]]);
+    vec3 v1_screen =
+        vec3((v1_model.x + 1.f) * screen->width / 2.f,
+             (v1_model.y + 1.f) * screen->height / 2.f, v1_model.z);
+
+    vec3 v2_model = convertGlm(mesh->mVertices[face.mIndices[1]]);
+    vec3 v2_screen =
+        vec3((v2_model.x + 1.f) * screen->width / 2.f,
+             (v2_model.y + 1.f) * screen->height / 2.f, v2_model.z);
+
+    vec3 v3_model = convertGlm(mesh->mVertices[face.mIndices[2]]);
+    vec3 v3_screen =
+        vec3((v3_model.x + 1.f) * screen->width / 2.f,
+             (v3_model.y + 1.f) * screen->height / 2.f, v3_model.z);
+
+    DrawTriangle(screen, v1_screen, v2_screen, v3_screen);
   }
 }
 
-void EventLoop(screen* screen, SDL_Renderer* renderer, SDL_Texture* texture) {
+void EventLoop(screen* screen,
+               resources* resources,
+               SDL_Renderer* renderer,
+               SDL_Texture* texture) {
   bool running = true;
   while (running) {
     SDL_Event event;
@@ -71,7 +144,7 @@ void EventLoop(screen* screen, SDL_Renderer* renderer, SDL_Texture* texture) {
     memset(screen->framebuffer, 0x00,
            screen->height * screen->width * sizeof(uint32_t));
 
-    Draw(screen);
+    Draw(screen, resources);
 
     memcpy(texturePixels, screen->framebuffer,
            screen->height * screen->width * sizeof(uint32_t));
@@ -82,6 +155,15 @@ void EventLoop(screen* screen, SDL_Renderer* renderer, SDL_Texture* texture) {
 }
 
 int main() {
+  // Load model
+  resources resources = {};
+  resources.scene = aiImportFile("african_head/african_head.obj",
+                                 aiProcessPreset_TargetRealtime_Fast);
+  if (!resources.scene) {
+    std::cout << aiGetErrorString();
+    exit(0);
+  }
+
   screen screen = {};
   screen.width = 1024;
   screen.height = 768;
@@ -94,9 +176,10 @@ int main() {
   screen.framebuffer =
       (color*)malloc(screen.height * screen.width * sizeof(color));
 
-  EventLoop(&screen, renderer, texture);
+  EventLoop(&screen, &resources, renderer, texture);
 
   Destroy(&screen, window, renderer, texture);
+  aiReleaseImport(resources.scene);
 }
 
 void Initialize(SDL_Window** window,
