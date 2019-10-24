@@ -5,22 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Intro a 3D rendering</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="jsxgraph.css">
   </head>
   <body>
-      <h2> Translacion Puntos </h2>
-      <h3> Punto + Vector = Punto </h3>
-      <div class="bottom-right">
-        <a id="left" href="escalar-vector.html">
-          <button>
-            <div class="arrow-left"/>
-          </button>
-        </a>
-        <a id="right" href="resta-puntos.html">
-          <button>
-            <div class="arrow-right"/>
-          </button>
-        </a>
-      </div>
-      <script defer src="leftright.js"></script>
+    <h2> Translacion Puntos </h2>
+    <h4> Punto + Vector = Punto </h4>
+    <h4> (a,b,c) + (x,y,z) = (a+x,b+y,c+z) </h4>
+    <div class="hcenter">
+      <div id="jxgbox" class="jxgbox" style="width:50vw; height:50vh;"> </div>
+    </div>
+    <div class="bottom-right">
+      <a id="left" href="escalar-vector.html">
+        <button>
+          <div class="arrow-left"/>
+        </button>
+      </a>
+      <a id="right" href="resta-puntos.html">
+        <button>
+          <div class="arrow-right"/>
+        </button>
+      </a>
+    </div>
+    <script defer src="leftright.js"></script>
+    <script src="jsxgraphcore.js"></script>
+    <script src="jsxgraphoptions.js"></script>
+    <script>
+      var board = JXG.JSXGraph.initBoard('jxgbox', 
+        { axis:true});
+      var p = board.create('point',[-3,1], {name:'A'});
+      var p2 = board.create('point',[-1,-1], {name:'B'});
+      var v = board.create('arrow', ['B','A'], {strokewidth: 5 });
+      var ticks = board.create('ticks', [v,1]);
+    </script>
   </body>
 </html>

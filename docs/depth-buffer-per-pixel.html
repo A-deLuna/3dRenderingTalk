@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Intro a 3D rendering</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <h2> deph-buffer-per-pixel </h2>
+    <table class="pixel-memory">
+      <tbody>
+        <tr>
+          <td>frame buffer</td>
+        <!--red -->
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+        <!--green -->
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+        <!--blue -->
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+        </tr>
+        <tr>
+          <td>depth buffer</td>
+        <!--red -->
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+        <!--green -->
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+        <!--blue -->
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+          <td class="pixel-memory" style="color:#fff;background:#000;">0x00</td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <h4> draw: </h4>
+    <div class="hcenter">
+      <table>
+        <tr>
+          <td class="pixels" style="background:#f00;"> </td>
+          <td > depth = 8 </td>
+        </tr>
+      </table>
+    </div>
+    <table class="pixels">
+      <tbody>
+      <tr>
+        <td class="pixels" style="background:#000;"> </td>
+        <td class="pixels" style="background:#000;"> </td>
+        <td class="pixels" style="background:#000;"> </td>
+      </tr>
+      <tr>
+        <td class="pixels" style="background:#000;"> </td>
+        <td class="pixels" style="background:#000;"> </td>
+        <td class="pixels" style="background:#000;"> </td>
+      </tr>
+      <tr>
+        <td class="pixels" style="background:#000;"> </td>
+        <td class="pixels" style="background:#000;"> </td>
+        <td class="pixels" style="background:#000;"> </td>
+      </tr>
+      </tbody>
+    </table>
+    <div class="bottom-right">
+      <a id="left" href="depth-buffer.html">
+        <button>
+          <div class="arrow-left"/>
+        </button>
+      </a>
+      <a id="right" href="depth-buffer-per-pixel2.html">
+        <button>
+          <div class="arrow-right"/>
+        </button>
+      </a>
+    </div>
+    <script defer src="leftright.js"></script>
+  </body>
+</html>

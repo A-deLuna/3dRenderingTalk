@@ -5,21 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Intro a 3D rendering</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="jsxgraph.css">
   </head>
   <body>
-      <h2> como-encontrar-baricentricas </h2>
-      <div class="bottom-right">
-        <a id="left" href="coordeneadas-baricntricas.html">
-          <button>
-            <div class="arrow-left"/>
-          </button>
-        </a>
-        <a id="right" href="como-encontrar-baricentricas2.html">
-          <button>
-            <div class="arrow-right"/>
-          </button>
-        </a>
-      </div>
-      <script defer src="leftright.js"></script>
+    <h2> Punto P como suma de vectores </h2>
+    <h4> u CA + v CB = P
+    <div class="hcenter">
+      <div id="jxgbox" class="jxgbox" style="width:50vw; height:50vh;"> </div>
+    </div>
+    <div class="bottom-right">
+      <a id="left" href="coordeneadas-baricntricas.html">
+        <button>
+          <div class="arrow-left"/>
+        </button>
+      </a>
+      <a id="right" href="como-encontrar-baricentricas2.html">
+        <button>
+          <div class="arrow-right"/>
+        </button>
+      </a>
+    </div>
+    <script defer src="leftright.js"></script>
+    <script src="jsxgraphcore.js"></script>
+    <script src="jsxgraphoptions.js"></script>
+    <script>
+      var board = JXG.JSXGraph.initBoard('jxgbox', 
+        { axis:true});
+      var s1 = board.create('slider',[[-4.5,4],[-2.5,4],
+        [-1.5,1,1.5]], {name:"u", snapWidth: 0.05});
+      var s2 = board.create('slider',[[-4.5,3],[-2.5,3],
+        [-1.5,1,1.5]], {name: "v", snapWidth: 0.05});
+      var p1 = board.create('point',[0,1],{color:'blue',name:'A'});
+      var p2 = board.create('point',[2,2], {color:'blue',name:'B'});
+      var p3 = board.create('point',[1,-2], {color:'blue',name:'C'});
+      var v1_tip = board.create('point', [v1Tip],{visible:false, name:'tip1'});
+      var v2_tip = board.create('point', [v2Tip],
+        {showInfobox:false, visible:true, name:'P'});
+      var poly = board.create('polygon', [p1,p2,p3]);
+      var v1 = board.create('arrow', [p3,v1_tip], {strokewidth:5,
+      strokeColor: "#f00"});
+      var v2 = board.create('arrow', [v1_tip,v2_tip], {strokewidth:5,
+      strokeColor: "#f0c"});
+      function v1Tip() {
+        var vec = [p1.X() - p3.X(), p1.Y() - p3.Y()];
+        var scaledVec = [s1.Value() * vec[0], s1.Value() * vec[1]];
+        return [p3.X() + scaledVec[0], p3.Y() + scaledVec[1]];
+      }
+      function v2Tip() {
+        var vec = [p2.X() - p3.X(), p2.Y() - p3.Y()];
+        var scaledVec = [s2.Value() * vec[0], s2.Value() * vec[1]];
+        return [v1_tip.X() +scaledVec[0], v1_tip.Y() + scaledVec[1]];
+      }
+      function baricentricCoords() {
+        var v1 = [p1.X() - p3.X(), p1.Y() - p3.Y()];
+        var v2 = [p2.X() - p3.X(), p2.Y() - p3.Y()];
+        var vp = [p3.X() - p4.X(), p3.Y() - p4.Y()];
+
+        var xVec = [v1[0], v2[0], vp[0]];
+        var yVec = [v1[1], v2[1], vp[1]];
+
+        var cross = crossProduct(xVec, yVec);
+        var u = cross[0] / cross[2];
+        var v = cross[1] / cross[2];
+        return "(" +u.toFixed(2)+ ","+v.toFixed(2)+
+          ","+(1-u-v).toFixed(2)+")";
+      }
+
+      function crossProduct(vect_A, vect_B) 
+      { 
+            var cross_P = [0,0,0]
+            cross_P[0] = vect_A[1] * vect_B[2] - vect_A[2] * vect_B[1]; 
+            cross_P[1] = vect_A[2] * vect_B[0] - vect_A[0] * vect_B[2]; 
+            cross_P[2] = vect_A[0] * vect_B[1] - vect_A[1] * vect_B[0]; 
+        return cross_P;
+      }
+      
+    </script>
   </body>
 </html>

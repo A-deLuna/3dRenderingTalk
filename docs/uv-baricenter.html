@@ -5,21 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Intro a 3D rendering</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="jsxgraph.css">
   </head>
   <body>
-      <h2> uv-baricenter </h2>
-      <div class="bottom-right">
-        <a id="left" href="uv-coords-in-model.html">
-          <button>
-            <div class="arrow-left"/>
-          </button>
-        </a>
-        <a id="right" href="renderer-v4.html">
-          <button>
-            <div class="arrow-right"/>
-          </button>
-        </a>
-      </div>
-      <script defer src="leftright.js"></script>
+  <h2> uv-baricenter </h2>
+  <div class="hcenter">
+    <div id="jxgbox" class="jxgbox" style="width:50vw; height:50vh;"> </div>
+  </div>
+    <div class="bottom-right">
+      <a id="left" href="uv-coords-in-model.html">
+        <button>
+          <div class="arrow-left"/>
+        </button>
+      </a>
+      <a id="right" href="renderer-v4.html">
+        <button>
+          <div class="arrow-right"/>
+        </button>
+      </a>
+    </div>
+    <script defer src="leftright.js"></script>
+    <script src="jsxgraphcore.js"></script>
+    <script src="jsxgraphoptions.js"></script>
+    <script>
+      var board = JXG.JSXGraph.initBoard('jxgbox', 
+        { axis:true});
+      var n1 = '(.4,0)';
+      var n2 = '(.75,.55)';
+      var n3 = '(1,0)';
+      var p1 = board.create('point',[1.5,-1],{color:'blue',name:n1});
+      var p2 = board.create('point',[2.5,3], {color:'blue',name:n2});
+      var p3 = board.create('point',[3.5,-1], {color:'blue',name:n3});
+      var p4 = board.create('point',[2.5,1], {name:'P', size:5, showInfobox:false});
+      var poly = board.create('polygon', [p1,p2,p3]);
+      var text = board.create('text', [-5,-2.5, baricentricCoords]
+        , {fontsize: 30});
+      function baricentricCoords() {
+        var v1 = [p1.X() - p3.X(), p1.Y() - p3.Y()];
+        var v2 = [p2.X() - p3.X(), p2.Y() - p3.Y()];
+        var vp = [p3.X() - p4.X(), p3.Y() - p4.Y()];
+
+        var xVec = [v1[0], v2[0], vp[0]];
+        var yVec = [v1[1], v2[1], vp[1]];
+
+        var cross = crossProduct(xVec, yVec);
+        var u = cross[0] / cross[2];
+        var v = cross[1] / cross[2];
+        var fixedU = u.toFixed(2);
+        var fixedV = v.toFixed(2);
+        var fixedW = (1-u-v).toFixed(2);
+
+        var vec1 = [.4,0]
+        var vec2 = [.75, .55]
+        var vec3 = [1,0] 
+        var uv = [u * .4 + v * .75 + (1-u-v) * 1,
+                  u * 0 + v * .55 + (1-u-v) * 0];
+        return `(${fixedU},${fixedV}, ${fixedW})<br>
+                ${n1} * ${fixedU} + ${n2} * ${fixedV} 
+          + ${n3} * ${fixedW}</br>
+          uv = (${uv[0].toFixed(2)}, ${uv[1].toFixed(2)})`;
+        //return "(" +u.toFixed(2)+ ","+v.toFixed(2)+
+          //","+(1-u-v).toFixed(2)+")<br> 1 * ";
+      }
+
+function crossProduct(vect_A, vect_B) 
+{ 
+      var cross_P = [0,0,0]
+      cross_P[0] = vect_A[1] * vect_B[2] - vect_A[2] * vect_B[1]; 
+      cross_P[1] = vect_A[2] * vect_B[0] - vect_A[0] * vect_B[2]; 
+      cross_P[2] = vect_A[0] * vect_B[1] - vect_A[1] * vect_B[0]; 
+  return cross_P;
+}
+      
+    </script>
   </body>
 </html>

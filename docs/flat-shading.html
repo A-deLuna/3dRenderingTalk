@@ -5,21 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Intro a 3D rendering</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="jsxgraph.css">
   </head>
   <body>
-      <h2> flat-shading </h2>
-      <div class="bottom-right">
-        <a id="left" href="renderer-v1.html">
-          <button>
-            <div class="arrow-left"/>
-          </button>
-        </a>
-        <a id="right" href="flat-shading-simulation.html">
-          <button>
-            <div class="arrow-right"/>
-          </button>
-        </a>
-      </div>
-      <script defer src="leftright.js"></script>
+    <h2> flat-shading </h2>
+    <div class="hcenter">
+      <div id="jxgbox" class="jxgbox" style="width:50vw; height:50vh;"> </div>
+  </div>
+    <div class="bottom-right">
+      <a id="left" href="renderer-v1.html">
+        <button>
+          <div class="arrow-left"/>
+        </button>
+      </a>
+      <a id="right" href="flat-shading-simulation.html">
+        <button>
+          <div class="arrow-right"/>
+        </button>
+      </a>
+    </div>
+    <script defer src="leftright.js"></script>
+    <script src="jsxgraphcore.js"></script>
+    <script src="jsxgraphoptions.js"></script>
+    <script>
+      var board = JXG.JSXGraph.initBoard('jxgbox', 
+        { axis:true, boundingbox:[-2,2,2,-2]});
+      var p1 = board.create('point',[-1.7,-.5], {visible:false,name:'A'});
+      var p2 = board.create('point',[-1.85,.5], {visible:false,name:'B'});
+      var p3 = board.create('point',[1.7,.5], {visible:false,name:'C'});
+      var p4 = board.create('point',[2,-.5], {visible:false,name:'D'});
+      var pl = board.create('point',[-1.5, 1], 
+        {showInfobox:false,name:'L'});
+      var poly = board.create('polygon', [p1,p2,p3,p4],
+        {fillColor:"#fff", fillOpacity: 1});
+      var normal = board.create('arrow', [[0,0], [0,1]],
+        {strokewidth: 4, name: 'N'});
+      var light = board.create('arrow', ['L', [0,0]],
+        {strokewidth: 4, strokeColor: "#f00"});
+      setInterval(() => {
+        var nVec = [0,1];
+        var lightVec = [-pl.X(), -pl.Y()];
+        lightVec = normalize(lightVec);
+
+        var dot = lightVec[0] * nVec[0] + lightVec[1] * nVec[1];
+
+        var colorStr = "#000000";
+        if (dot <  0) {
+          var hex = (-dot) * 255;
+          var hexstr  = hex.toString(16).split('.')[0];
+          hexstr = String("0"+hexstr).slice(-2);
+          colorStr = "#" + hexstr.repeat(3);
+        }
+        poly.setAttribute({fillColor: colorStr,
+        highlightFillColor: colorStr});
+
+      }, 1)
+      function normalize(v) {
+        var l = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+        return [v[0]/l, v[1]/l];
+      }
+
+    </script>
   </body>
 </html>
