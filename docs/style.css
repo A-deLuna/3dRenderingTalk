@@ -1,7 +1,11 @@
-ul, li, h1, h2, h3, h4, p , td{
+ul, li, h1, h2, h3, h4, p , td, a.diff {
   font-family: "Source Sans Pro", Helvetica, sans-serif;
   color: #fff;
   text-align: center;
+}
+
+img.single-image {
+  height: 70vh;
 }
 
 ul, li {
