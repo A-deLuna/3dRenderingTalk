@@ -4,6 +4,10 @@ ul, li, h1, h2, h3, h4, p , td, a.diff {
   text-align: center;
 }
 
+img.code {
+  height: 90vh;
+}
+
 img.single-image {
   height: 70vh;
 }
